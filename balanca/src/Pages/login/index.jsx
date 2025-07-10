@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { login } from "../../firebase";
 import { useNavigate } from "react-router-dom";
+import "./login.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -27,52 +28,34 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Controle de Lavanderia
-        </h1>
+    <div className="login-container">
+      <div className="login-box">
+        <h1 className="login-title">Controle de Lavanderia</h1>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+        {error && <div className="login-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="email">
-              Usuário
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="w-full p-3 border rounded"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+          <label htmlFor="email">Usuário</label>
+          <input
+            id="email"
+            type="text"
+            className="login-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2" htmlFor="password">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="w-full p-3 border rounded"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <label htmlFor="password">Senha</label>
+          <input
+            id="password"
+            type="password"
+            className="login-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:bg-blue-300"
-            disabled={loading}
-          >
+          <button type="submit" className="login-button" disabled={loading}>
             {loading ? "Carregando..." : "Entrar"}
           </button>
         </form>

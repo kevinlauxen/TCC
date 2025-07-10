@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, push } from "firebase/database";
 import {
+  createUserWithEmailAndPassword,
   getAuth,
   signInWithEmailAndPassword,
   signOut,
@@ -23,6 +24,19 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
+async function cadastrar(email, password) {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    return userCredential.user;
+  } catch (error) {
+    throw error;
+  }
+}
+
 // Função de login
 async function login(email, password) {
   try {
@@ -31,6 +45,8 @@ async function login(email, password) {
       email,
       password
     );
+
+    console.log(auth);
     return userCredential.user;
   } catch (error) {
     throw error;
@@ -82,4 +98,5 @@ export {
   monitorarBalanca,
   manterLigado,
   tararBalanca,
+  cadastrar,
 };
