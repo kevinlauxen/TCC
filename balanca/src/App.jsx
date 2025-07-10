@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "./firebase"; // Agora está corretamente exportado
 import Login from "./Pages/login";
 import Home from "./Pages/home";
-import Loading from "./components/loading";
+import Loading from ". /components/loading";
 
 function App() {
   const [user, setUser] = useState(null);
