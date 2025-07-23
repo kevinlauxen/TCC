@@ -1,4 +1,3 @@
-import { Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "./services/provedor/Authprovider";
 import Login from "./Pages/login";
 import Home from "./Pages/home";
@@ -6,19 +5,25 @@ import Loading from "./components/loading";
 import Register from "./Pages/register";
 import { useEffect } from "react";
 
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+
 function App() {
-  const { user, loading } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate("/login", { replace: true });
-      } else if (window.location.pathname === "/login") {
-        navigate("/", { replace: true });
-      }
+    if (loading) return;
+
+    const publicPaths = ["/login", "/register"];
+    const isPublicPath = publicPaths.includes(location.pathname);
+
+    if (!isAuthenticated && !isPublicPath) {
+      navigate("/login", { replace: true });
+    } else if (isAuthenticated && isPublicPath) {
+      navigate("/", { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [loading, isAuthenticated, navigate, location.pathname]);
 
   if (loading) {
     return <Loading />;
@@ -28,8 +33,8 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/home" element={<Home />} />
       <Route path="/" element={<Home />} />
+      <Route path="/home" element={<Home />} />
     </Routes>
   );
 }

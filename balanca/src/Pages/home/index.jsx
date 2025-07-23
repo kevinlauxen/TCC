@@ -1,262 +1,98 @@
+// Home.jsx
 import { useEffect, useState } from "react";
-import { db, ref, onValue, set, logout } from "../../firebase";
-import { useNavigate } from "react-router-dom";
-import "./Home.css";
+import { db, ref, onValue, set } from "../../firebase";
 import { logAction } from "../../services/logger/logger";
+import WashHistory from "../../components/WashHistory"; // Importação padrão
+import WeightDisplay from "../../components/WeightDisplay"; // Importação padrão
+import StatusCard from "../../components/StatusCard"; // Importação padrão
+import Header from "../../components/header/index"; // Adicionei essa importação que estava faltando
+import LastWash from "../../components/LastWash"; // Adicionei essa importação que estava faltando
+import "./Home.css";
+
+// ... restante do código permanece igual
+
+import "./Home.css";
 
 function Home() {
-  const [balanca, setBalanca] = useState({
+  const [scale, setScale] = useState({
     peso: 0,
     status: { online: false, ultima_atividade: 0 },
     config: {},
   });
 
-  const [lavagens, setLavagens] = useState([]);
-  const [ultimaLavagem, setUltimaLavagem] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [washes, setWashes] = useState([]);
+  const [lastWash, setLastWash] = useState(null);
 
   useEffect(() => {
-    // Verifica conexão
+    // Monitora conexão
     const connectionRef = ref(db, ".info/connected");
     const unsubscribeConnection = onValue(connectionRef, (snap) => {
       console.log("Status conexão:", snap.val() ? "Online" : "Offline");
-      if (!snap.val()) {
-        // Lógica para estado offline
-      }
     });
 
-    // Monitora balança com tratamento de erro
-    const balancaRef = ref(db, "balanca");
-    const unsubscribeBalanca = onValue(
-      balancaRef,
-      (snapshot) => {
-        const data = snapshot.val() || {};
-        setBalanca((prev) => ({ ...prev, ...data }));
-      },
-      (error) => {
-        console.error("Erro ao ler balança:", error);
-        setBalanca((prev) => ({
-          ...prev,
-          status: { ...prev.status, online: false },
-        }));
-      }
-    );
+    // Monitora balança
+    const scaleRef = ref(db, "balanca");
+    const unsubscribeScale = onValue(scaleRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      setScale((prev) => ({ ...prev, ...data }));
+    });
 
-    // Monitora lavagens com cache local
-    const lavagensRef = ref(db, "lavagens/historico");
-    const unsubscribeLavagens = onValue(
-      lavagensRef,
-      (snapshot) => {
-        const data = snapshot.val();
-        const lavagensArray = data
-          ? Object.entries(data).map(([key, value]) => ({
-              id: key,
-              ...value,
-            }))
-          : [];
-        setLavagens(lavagensArray);
-        localStorage.setItem("lavagensCache", JSON.stringify(lavagensArray));
-      },
-      (error) => {
-        console.error("Erro ao ler lavagens:", error);
-        const cache = localStorage.getItem("lavagensCache");
-        if (cache) setLavagens(JSON.parse(cache));
-      }
-    );
+    // Monitora lavagens
+    const washesRef = ref(db, "lavagens/historico");
+    const unsubscribeWashes = onValue(washesRef, (snapshot) => {
+      const data = snapshot.val();
+      const washesArray = data
+        ? Object.entries(data).map(([key, value]) => ({
+            id: key,
+            ...value,
+          }))
+        : [];
+      setWashes(washesArray);
+      setLastWash(washesArray[0] || null);
+    });
 
     return () => {
       unsubscribeConnection();
-      unsubscribeBalanca();
-      unsubscribeLavagens();
+      unsubscribeScale();
+      unsubscribeWashes();
     };
   }, []);
 
-  const handleTara = async () => {
+  const handleTare = async () => {
     try {
       await set(ref(db, "balanca/comando/tara"), true);
-      await logAction("tara_executada", { pesoAtual: balanca.peso });
+      await logAction("tara_executada", { pesoAtual: scale.peso });
     } catch (error) {
       await logAction("erro_tara", { error: error.message });
     }
   };
 
-  const handleManterLigado = () => {
+  const handleKeepOn = () => {
     set(ref(db, "balanca/comando/manter_ligado"), true);
   };
 
-  const handleCalibrar = () => {
+  const handleCalibrate = () => {
     set(ref(db, "balanca/comando/calibrar"), true);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="loader-screen">
-        <div className="loader"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="home-container">
-      <header className="header">
-        <h1 className="title">Painel de Controle</h1>
-        <div className="header-actions">
-          <span className="firmware-version">
-            {balanca.status?.versao_firmware || "1.0.0"}
-          </span>
-          <button className="btn btn-danger" onClick={handleLogout}>
-            Sair
-          </button>
-        </div>
-      </header>
+      <Header firmwareVersion={scale.status?.versao_firmware} />
 
       <main className="main-content">
-        {/* Seção Status da Balança */}
-        <div className="card">
-          <h2 className="card-title">Status da Balança</h2>
-          <div className="card-grid">
-            <div className="status-item">
-              <p className="label">Status</p>
-              <p
-                className={`status ${
-                  balanca.status?.online ? "online" : "offline"
-                }`}
-              >
-                {balanca.status?.online ? "Online" : "Offline"}
-              </p>
-            </div>
-            <div className="status-item">
-              <p className="label">Última Atividade</p>
-              <p className="timestamp">
-                {balanca.status?.ultima_atividade
-                  ? new Date(balanca.status.ultima_atividade).toLocaleString()
-                  : "N/A"}
-              </p>
-            </div>
-            <div className="status-item">
-              <p className="label">Intervalo Leitura</p>
-              <p>{balanca.config?.intervalo_leitura || 2000} ms</p>
-            </div>
-            <div className="status-item">
-              <p className="label">Fator Calibração</p>
-              <p>{balanca.config?.fator_calibracao || 0}</p>
-            </div>
-          </div>
-        </div>
+        <StatusCard status={scale.status} config={scale.config} />
 
-        {/* Seção Peso Atual */}
-        <div className="card">
-          <h2 className="card-title">Peso Atual</h2>
-          <div className="card-flex">
-            <div className="weight-display">
-              <p className="peso">{balanca.peso?.toFixed(2) || "0.00"} kg</p>
-              <p className="label">
-                {balanca.status?.online ? "Conectado" : "Desconectado"}
-              </p>
-            </div>
-            <div className="btn-group">
-              <button className="btn btn-primary" onClick={handleTara}>
-                Zerar Balança
-              </button>
-              <button className="btn btn-success" onClick={handleManterLigado}>
-                Manter Ligada
-              </button>
-              <button className="btn btn-warning" onClick={handleCalibrar}>
-                Calibrar
-              </button>
-            </div>
-          </div>
-        </div>
+        <WeightDisplay
+          weight={scale.peso}
+          isOnline={scale.status?.online}
+          onTare={handleTare}
+          onKeepOn={handleKeepOn}
+          onCalibrate={handleCalibrate}
+        />
 
-        {/* Seção Última Lavagem */}
-        {ultimaLavagem && (
-          <div className="card">
-            <h2 className="card-title">Última Lavagem</h2>
-            <div className="last-wash">
-              <div className="wash-info">
-                <p className="label">Data</p>
-                <p>{new Date(ultimaLavagem.data).toLocaleString()}</p>
-              </div>
-              <div className="wash-info">
-                <p className="label">Ciclo</p>
-                <p>{ultimaLavagem.ciclo || "Normal"}</p>
-              </div>
-              <div className="wash-info">
-                <p className="label">Peso das Roupas</p>
-                <p>{ultimaLavagem.peso_roupas?.toFixed(2)} kg</p>
-              </div>
-              <div className="wash-products">
-                <h3>Produtos Utilizados:</h3>
-                <ul>
-                  <li>
-                    <strong>Sabão:</strong>{" "}
-                    {ultimaLavagem.produtos?.sabao?.quantidade?.toFixed(2)}{" "}
-                    {ultimaLavagem.produtos?.sabao?.unidade}
-                  </li>
-                  <li>
-                    <strong>Amaciante:</strong>{" "}
-                    {ultimaLavagem.produtos?.amaciante?.quantidade?.toFixed(2)}{" "}
-                    {ultimaLavagem.produtos?.amaciante?.unidade}
-                  </li>
-                  <li>
-                    <strong>Alvejante:</strong>{" "}
-                    {ultimaLavagem.produtos?.alvejante?.quantidade?.toFixed(2)}{" "}
-                    {ultimaLavagem.produtos?.alvejante?.unidade}
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
+        {lastWash && <LastWash wash={lastWash} />}
 
-        {/* Seção Histórico de Lavagens */}
-        <div className="card">
-          <h2 className="card-title">Histórico de Lavagens</h2>
-          {lavagens.length > 0 ? (
-            <div className="table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Ciclo</th>
-                    <th>Peso (kg)</th>
-                    <th>Sabão (L)</th>
-                    <th>Amaciante (L)</th>
-                    <th>Alvejante (L)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lavagens.map((lavagem) => (
-                    <tr key={lavagem.id}>
-                      <td>{new Date(lavagem.data).toLocaleDateString()}</td>
-                      <td>{lavagem.ciclo || "Normal"}</td>
-                      <td>{lavagem.peso_roupas?.toFixed(2)}</td>
-                      <td>{lavagem.produtos?.sabao?.quantidade?.toFixed(2)}</td>
-                      <td>
-                        {lavagem.produtos?.amaciante?.quantidade?.toFixed(2)}
-                      </td>
-                      <td>
-                        {lavagem.produtos?.alvejante?.quantidade?.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="no-data">Nenhuma lavagem registrada.</p>
-          )}
-        </div>
+        <WashHistory washes={washes} />
       </main>
     </div>
   );

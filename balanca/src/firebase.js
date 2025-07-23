@@ -7,6 +7,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged as firebaseOnAuthStateChanged, // Renomeamos para evitar conflito
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -23,6 +25,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
+
+// Configuração de persistência ESSENCIAL
+(async () => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    console.log("Persistência configurada com sucesso");
+  } catch (error) {
+    console.error("Erro ao configurar persistência:", error);
+  }
+})();
 
 async function cadastrar(email, password) {
   try {
