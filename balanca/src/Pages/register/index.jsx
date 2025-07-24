@@ -1,6 +1,6 @@
 // src/components/register.jsx
 import { useState } from "react";
-import { cadastrar } from "../../firebase";
+import { authService } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 
 function register() {
@@ -16,7 +16,7 @@ function register() {
     setError("");
 
     try {
-      await cadastrar(email, password);
+      await authService.signUp(email, password);
       navigate("/home");
     } catch (err) {
       setError(err.message);

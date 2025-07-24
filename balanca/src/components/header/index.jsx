@@ -1,6 +1,6 @@
 // Header.jsx
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../../firebase";
+import { authService } from "../../firebase";
 import "./Header.css";
 
 export const Header = ({ firmwareVersion }) => {
@@ -8,7 +8,7 @@ export const Header = ({ firmwareVersion }) => {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await authService.signOut();
       navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);

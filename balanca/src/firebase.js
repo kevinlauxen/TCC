@@ -1,14 +1,14 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set, push } from "firebase/database";
+import { getDatabase, ref, onValue, set, push, get } from "firebase/database";
 import {
-  createUserWithEmailAndPassword,
   getAuth,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged as firebaseOnAuthStateChanged, // Renomeamos para evitar conflito
   setPersistence,
   browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -21,94 +21,95 @@ const firebaseConfig = {
   appId: "1:540884993507:web:5f034b08bc767407050cd6",
 };
 
-// Initialize Firebase
+// Inicialização do Firebase
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
 const auth = getAuth(app);
+const db = getDatabase(app);
 
-// Configuração de persistência ESSENCIAL
-(async () => {
-  try {
-    await setPersistence(auth, browserLocalPersistence);
-    console.log("Persistência configurada com sucesso");
-  } catch (error) {
-    console.error("Erro ao configurar persistência:", error);
-  }
-})();
+// Configurar persistência de autenticação
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-async function cadastrar(email, password) {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    return userCredential.user;
-  } catch (error) {
-    throw error;
-  }
-}
+// Serviço de Autenticação
+export const authService = {
+  async signUp(email, password) {
+    try {
+      const userCred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      return userCred.user;
+    } catch (error) {
+      throw this._formatError(error);
+    }
+  },
 
-// Função de login
-async function login(email, password) {
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+  async signIn(email, password) {
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      return userCred.user;
+    } catch (error) {
+      throw this._formatError(error);
+    }
+  },
 
-    console.log(auth);
-    return userCredential.user;
-  } catch (error) {
-    throw error;
-  }
-}
+  signOut: () => signOut(auth),
 
-// Função de logout
-async function logout() {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    throw error;
-  }
-}
+  onAuthChanged: (callback) => onAuthStateChanged(auth, callback),
 
-// Monitor de estado de autenticação
-function onAuthStateChanged(callback) {
-  return firebaseOnAuthStateChanged(auth, callback);
-}
-
-// Monitoramento de status da balança (opcional)
-function monitorarBalanca(callback) {
-  const statusRef = ref(db, "balanca/status");
-  return onValue(statusRef, (snapshot) => {
-    callback(snapshot.val());
-  });
-}
-
-// Funções de controle da balança
-function manterLigado() {
-  set(ref(db, "balanca/comando/manter_ligado"), true);
-}
-
-function tararBalanca() {
-  set(ref(db, "balanca/comando/tara"), true);
-}
-
-// Exportações
-export {
-  db,
-  auth,
-  ref,
-  onValue,
-  set,
-  push,
-  login,
-  logout,
-  onAuthStateChanged, // Exportamos nossa função wrapper
-  monitorarBalanca,
-  manterLigado,
-  tararBalanca,
-  cadastrar,
+  _formatError(error) {
+    const errorMap = {
+      "auth/invalid-email": "Email inválido",
+      "auth/wrong-password": "Senha incorreta",
+      "auth/user-not-found": "Usuário não encontrado",
+      "auth/email-already-in-use": "Email já cadastrado",
+    };
+    return new Error(errorMap[error.code] || "Erro na autenticação");
+  },
 };
+
+// Serviço das Balanças
+export const scaleService = {
+  // Monitora status de uma balança específica
+  monitorStatus(balancaId, callback) {
+    return onValue(ref(db, `balancas/${balancaId}/status`), callback);
+  },
+
+  // Monitora peso de uma balança específica
+  monitorWeight(balancaId, callback) {
+    return onValue(ref(db, `balancas/${balancaId}/peso`), callback);
+  },
+
+  // Envia comando para balança específica
+  sendCommand(balancaId, command, value = true) {
+    return set(ref(db, `balancas/${balancaId}/comando/${command}`), value);
+  },
+
+  // Obtém lista de balanças disponíveis
+  async getAvailableScales() {
+    const snapshot = await get(ref(db, "balancas"));
+    return snapshot.val() ? Object.keys(snapshot.val()) : [];
+  },
+};
+
+// Serviço de Lavagens
+export const washService = {
+  // Adiciona nova lavagem ao histórico
+  addWash(washData) {
+    return push(ref(db, "lavagens/historico"), washData);
+  },
+
+  // Obtém histórico de lavagens
+  monitorHistory(callback) {
+    return onValue(ref(db, "lavagens/historico"), callback);
+  },
+
+  // Obtém a última lavagem
+  async getLastWash() {
+    const snapshot = await get(ref(db, "lavagens/ultima"));
+    return snapshot.val();
+  },
+};
+
+// Exportações básicas para uso direto quando necessário
+export { db, auth, ref, set };

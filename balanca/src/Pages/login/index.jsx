@@ -1,6 +1,6 @@
 // src/components/Login.jsx
 import { useState } from "react";
-import { login } from "../../firebase";
+import { authService } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
 
@@ -17,7 +17,7 @@ function Login() {
     setError("");
 
     try {
-      await login(email, password);
+      await authService.signIn(email, password);
       navigate("/home");
     } catch (err) {
       setError("Credenciais inválidas. Por favor, tente novamente.");
