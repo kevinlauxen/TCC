@@ -29,7 +29,6 @@ const db = getDatabase(app);
 // Configurar persistência de autenticação
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-// Serviço de Autenticação
 export const authService = {
   async signUp(email, password) {
     try {
@@ -44,13 +43,16 @@ export const authService = {
     }
   },
 
-  async signIn(email, password) {
-    try {
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      return userCred.user;
-    } catch (error) {
-      throw this._formatError(error);
+  signIn: (email, password) =>
+    signInWithEmailAndPassword(auth, email, password),
+
+  checkRole: async (uid) => {
+    const roleRef = ref(db, `controle/usuario/${uid}/role`);
+    const snapshot = await get(roleRef);
+    if (snapshot.exists()) {
+      return snapshot.val();
     }
+    return null;
   },
 
   signOut: () => signOut(auth),
@@ -70,6 +72,18 @@ export const authService = {
 
 // Serviço das Balanças
 export const scaleService = {
+  //Manda o comando
+  sendCommand(balancaId, command, value = true) {
+    return new Promise((resolve, reject) => {
+      const commandRef = ref(db, `balancas/${balancaId}/comando/${command}`);
+      set(commandRef, value)
+        .then(resolve)
+        .catch((error) => {
+          console.error(`Erro no comando ${command}:`, error);
+          reject(error);
+        });
+    });
+  },
   // Monitora status de uma balança específica
   monitorStatus(balancaId, callback) {
     return onValue(ref(db, `balancas/${balancaId}/status`), callback);
@@ -78,11 +92,6 @@ export const scaleService = {
   // Monitora peso de uma balança específica
   monitorWeight(balancaId, callback) {
     return onValue(ref(db, `balancas/${balancaId}/peso`), callback);
-  },
-
-  // Envia comando para balança específica
-  sendCommand(balancaId, command, value = true) {
-    return set(ref(db, `balancas/${balancaId}/comando/${command}`), value);
   },
 
   // Obtém lista de balanças disponíveis
@@ -112,4 +121,4 @@ export const washService = {
 };
 
 // Exportações básicas para uso direto quando necessário
-export { db, auth, ref, set };
+export { db, auth, ref, set, get };

@@ -1,6 +1,5 @@
-// src/components/Login.jsx
 import { useState } from "react";
-import { authService } from "../../firebase";
+import { authService, auth } from "../../firebase"; // 🛠️ Importar auth aqui
 import { useNavigate } from "react-router-dom";
 import "./login.css";
 
@@ -18,7 +17,17 @@ function Login() {
 
     try {
       await authService.signIn(email, password);
-      navigate("/home");
+
+      const user = auth.currentUser;
+      const role = await authService.checkRole(user.uid);
+
+      if (role === "admin") {
+        navigate("/admin");
+      } else if (role === "operador") {
+        navigate("/operador");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError("Credenciais inválidas. Por favor, tente novamente.");
       console.error("Erro de login:", err);

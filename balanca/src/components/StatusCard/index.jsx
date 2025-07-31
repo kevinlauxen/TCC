@@ -1,11 +1,24 @@
-// StatusCard.jsx
 import "./StatusCard.css";
 
-export const StatusCard = ({ status, config }) => {
+export const StatusCard = ({
+  status,
+  config,
+  connectionActive,
+  onToggleConnection,
+}) => {
   return (
     <div className="card">
       <h2 className="card-title">Status da Balança</h2>
       <div className="card-grid">
+        <div className="status-item">
+          <p className="label">Conexão</p>
+          <button
+            onClick={onToggleConnection}
+            className={`connection-btn ${connectionActive ? "active" : ""}`}
+          >
+            {connectionActive ? "Desligar" : "Ligar"}
+          </button>
+        </div>
         <div className="status-item">
           <p className="label">Status</p>
           <p className={`status ${status?.online ? "online" : "offline"}`}>

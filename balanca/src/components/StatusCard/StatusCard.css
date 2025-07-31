@@ -1,0 +1,26 @@
+.connection-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.connection-btn.active {
+  background-color: #dc3545;
+  color: white;
+}
+
+.connection-btn:not(.active) {
+  background-color: #28a745;
+  color: white;
+}
+
+.connection-message {
+  text-align: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}

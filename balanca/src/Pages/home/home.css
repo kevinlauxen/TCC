@@ -240,6 +240,25 @@
   height: 50px;
   animation: spin 2s linear infinite;
 }
+.error-message {
+  padding: 15px;
+  margin: 20px 0;
+  border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  background: none;
+  border: none;
+  color: #721c24;
+  cursor: pointer;
+  font-weight: bold;
+}
 
 @keyframes spin {
   0% {

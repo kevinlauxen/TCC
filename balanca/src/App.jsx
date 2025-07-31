@@ -20,8 +20,11 @@ function App() {
 
     if (!isAuthenticated && !isPublicPath) {
       navigate("/login", { replace: true });
-    } else if (isAuthenticated && isPublicPath) {
+      return;
+    }
+    if (isAuthenticated && isPublicPath) {
       navigate("/", { replace: true });
+      return;
     }
   }, [loading, isAuthenticated, navigate, location.pathname]);
 
