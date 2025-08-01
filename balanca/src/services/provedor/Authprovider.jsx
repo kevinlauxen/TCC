@@ -12,19 +12,41 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Estado de autenticação alterado:", user);
-      setAuthState({
-        user: user
-          ? {
-              uid: user.uid,
-              email: user.email,
-              emailVerified: user.emailVerified,
-            }
-          : null,
-        loading: false,
-        error: null,
-      });
+
+      try {
+        if (user) {
+          // Força atualização do token e verifica se está válido
+          const token = await user.getIdTokenResult();
+          console.log("Token do usuário:", token);
+
+          if (!token.claims) {
+            console.warn(
+              "Token não contém claims - pode indicar problema de autenticação"
+            );
+          }
+        }
+
+        setAuthState({
+          user: user
+            ? {
+                uid: user.uid,
+                email: user.email,
+                emailVerified: user.emailVerified,
+              }
+            : null,
+          loading: false,
+          error: null,
+        });
+      } catch (error) {
+        console.error("Erro no AuthStateChanged:", error);
+        setAuthState({
+          user: null,
+          loading: false,
+          error: error.message,
+        });
+      }
     });
 
     return unsubscribe;

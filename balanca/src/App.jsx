@@ -4,8 +4,8 @@ import Home from "./Pages/home";
 import Loading from "./components/loading";
 import Register from "./Pages/register";
 import { useEffect } from "react";
-
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { ErrorBoundary } from "./services/provedor/ErrorBoundary";
 
 function App() {
   const { loading, isAuthenticated } = useAuth();
@@ -20,11 +20,8 @@ function App() {
 
     if (!isAuthenticated && !isPublicPath) {
       navigate("/login", { replace: true });
-      return;
-    }
-    if (isAuthenticated && isPublicPath) {
+    } else if (isAuthenticated && isPublicPath) {
       navigate("/", { replace: true });
-      return;
     }
   }, [loading, isAuthenticated, navigate, location.pathname]);
 
@@ -33,12 +30,14 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/" element={<Home />} />
-      <Route path="/home" element={<Home />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

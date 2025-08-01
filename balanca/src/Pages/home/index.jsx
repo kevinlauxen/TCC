@@ -7,6 +7,9 @@ import { StatusCard } from "../../components/StatusCard";
 import { Header } from "../../components/header";
 import { LastWash } from "../../components/LastWash";
 import "./Home.css";
+import { useAuth } from "../../services/provedor/Authprovider";
+import { ref, get, onValue } from "firebase/database";
+import { db } from "../../firebase";
 
 function Home() {
   const [activeScale, setActiveScale] = useState("principal");
@@ -35,6 +38,90 @@ function Home() {
     weight: null,
     status: null,
   });
+  const { isAuthenticated } = useAuth();
+
+  // Teste de conexão e autenticação
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const testConnection = async () => {
+      try {
+        // Teste de conexão
+        const connectionRef = ref(db, ".info/connected");
+        onValue(connectionRef, (snap) => {
+          console.log("Status da conexão Firebase:", snap.val());
+        });
+
+        // Teste de autenticação - tenta ler um nó pequeno
+        const testRef = ref(db, "balancas");
+        const snapshot = await get(testRef);
+        console.log("Teste de autenticação bem-sucedido:", snapshot.exists());
+
+        // Se passou do teste, carrega os dados
+        fetchScales();
+        setupWashMonitor();
+      } catch (error) {
+        console.error("Falha no teste de conexão/autenticação:", {
+          error: error.message,
+          code: error.code,
+        });
+        setError(
+          "Falha na conexão com o banco de dados. Verifique suas permissões."
+        );
+      }
+    };
+
+    // Carrega balanças disponíveis
+    const fetchScales = async () => {
+      try {
+        const availableScales = await scaleService.getAvailableScales();
+        console.log("Balanças disponíveis:", availableScales);
+
+        // Atualiza o estado com as balanças encontradas
+        setScales((prev) => {
+          const updated = { ...prev };
+          availableScales.forEach((scaleId) => {
+            if (!updated[scaleId]) {
+              updated[scaleId] = {
+                peso: 0,
+                status: { online: false, ultima_atividade: 0 },
+                config: {},
+              };
+            }
+          });
+          return updated;
+        });
+      } catch (error) {
+        console.error("Erro ao carregar balanças:", error);
+        setError("Não foi possível carregar as balanças disponíveis.");
+      }
+    };
+
+    // Monitora histórico de lavagens
+    const setupWashMonitor = () => {
+      const unsubscribeWashes = washService.monitorHistory((snapshot) => {
+        const data = snapshot.val();
+        const washesArray = data
+          ? Object.entries(data).map(([key, value]) => ({
+              id: key,
+              ...value,
+            }))
+          : [];
+        setWashes(washesArray);
+        setLastWash(washesArray[0] || null);
+      });
+
+      return unsubscribeWashes;
+    };
+
+    testConnection();
+
+    return () => {
+      // Limpeza ao desmontar o componente
+      if (unsubscribers.weight) unsubscribers.weight();
+      if (unsubscribers.status) unsubscribers.status();
+    };
+  }, [isAuthenticated]);
 
   const toggleConnection = useCallback(async () => {
     setError(null);
@@ -57,7 +144,7 @@ function Home() {
           await scaleService.sendCommand(activeScale, "standby", false);
         } catch (error) {
           console.error("Erro ao ativar balança:", error);
-          throw error; // Propaga o erro para ser tratado pelo UI
+          throw error;
         }
 
         const weightUnsub = scaleService.monitorWeight(
@@ -91,40 +178,11 @@ function Home() {
       }
     } catch (error) {
       setError(
-        "Não foi possível alterar o estado da balança. Verifique as permissões."
+        "Não foi possível conectar à balança. Verifique as permissões e a conexão."
       );
-      console.error("Erro ao alternar conexão:", error);
-      // Adicione aqui a lógica para mostrar o erro ao usuário
+      console.error("Erro na conexão com a balança:", error);
     }
   }, [activeScale, connectionActive, unsubscribers]);
-
-  useEffect(() => {
-    // Monitora balanças disponíveis (só executa uma vez)
-    const fetchScales = async () => {
-      const availableScales = await scaleService.getAvailableScales();
-      console.log("Balanças disponíveis:", availableScales);
-    };
-    fetchScales();
-
-    // Monitora lavagens (independente da conexão com balança)
-    const unsubscribeWashes = washService.monitorHistory((snapshot) => {
-      const data = snapshot.val();
-      const washesArray = data
-        ? Object.entries(data).map(([key, value]) => ({
-            id: key,
-            ...value,
-          }))
-        : [];
-      setWashes(washesArray);
-      setLastWash(washesArray[0] || null);
-    });
-
-    return () => {
-      if (unsubscribers.weight) unsubscribers.weight();
-      if (unsubscribers.status) unsubscribers.status();
-      unsubscribeWashes();
-    };
-  }, [activeScale]);
 
   // Atualiza a conexão quando troca de balança
   useEffect(() => {
@@ -146,6 +204,7 @@ function Home() {
         balanca: activeScale,
         error: error.message,
       });
+      setError("Erro ao executar tara. Tente novamente.");
     }
   };
 
@@ -194,6 +253,7 @@ function Home() {
 
         <WashHistory washes={washes} />
       </main>
+
       {error && (
         <div className="error-message">
           <p>{error}</p>

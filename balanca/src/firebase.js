@@ -28,7 +28,6 @@ const db = getDatabase(app);
 
 // Configurar persistência de autenticação
 setPersistence(auth, browserLocalPersistence).catch(console.error);
-
 export const authService = {
   async signUp(email, password) {
     try {
@@ -45,18 +44,7 @@ export const authService = {
 
   signIn: (email, password) =>
     signInWithEmailAndPassword(auth, email, password),
-
-  checkRole: async (uid) => {
-    const roleRef = ref(db, `controle/usuario/${uid}/role`);
-    const snapshot = await get(roleRef);
-    if (snapshot.exists()) {
-      return snapshot.val();
-    }
-    return null;
-  },
-
   signOut: () => signOut(auth),
-
   onAuthChanged: (callback) => onAuthStateChanged(auth, callback),
 
   _formatError(error) {
@@ -96,8 +84,28 @@ export const scaleService = {
 
   // Obtém lista de balanças disponíveis
   async getAvailableScales() {
-    const snapshot = await get(ref(db, "balancas"));
-    return snapshot.val() ? Object.keys(snapshot.val()) : [];
+    try {
+      console.log("Tentando acessar balancas...");
+      const balancasRef = ref(db, "balancas");
+      const snapshot = await get(balancasRef);
+
+      if (!snapshot.exists()) {
+        console.warn("Nenhuma balança encontrada - nó vazio");
+        return [];
+      }
+
+      const scalesData = snapshot.val();
+      console.log("Dados recebidos:", scalesData);
+
+      return Object.keys(scalesData);
+    } catch (error) {
+      console.error("Erro detalhado em getAvailableScales:", {
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      throw error;
+    }
   },
 };
 
